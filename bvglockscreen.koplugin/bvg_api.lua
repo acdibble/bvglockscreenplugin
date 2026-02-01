@@ -10,7 +10,10 @@ local BVGAPI = {
     base_url = "https://v6.bvg.transport.rest",
 }
 
-function BVGAPI:makeRequest(endpoint, force)
+function BVGAPI:makeRequest(endpoint, force, retry_count)
+    retry_count = retry_count or 0
+    local max_retries = 2
+
     if not force and not BVGUtils:canMakeRequest() then
         return nil, "rate_limited"
     end
@@ -34,6 +37,15 @@ function BVGAPI:makeRequest(endpoint, force)
 
     if not result or code ~= 200 then
         logger.err("BVG API error:", code, status)
+
+        -- Retry on DNS/network errors
+        if retry_count < max_retries and (not result or code == nil) then
+            logger.dbg("BVG API: Retrying in 2 seconds... (attempt", retry_count + 2, "of", max_retries + 1, ")")
+            local socket = require("socket")
+            socket.sleep(2)
+            return self:makeRequest(endpoint, force, retry_count + 1)
+        end
+
         return nil, "request_failed"
     end
 
