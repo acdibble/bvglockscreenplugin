@@ -7,13 +7,17 @@ local GestureRange = require("ui/gesturerange")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
 local InputContainer = require("ui/widget/container/inputcontainer")
+local RightContainer = require("ui/widget/container/rightcontainer")
+local BottomContainer = require("ui/widget/container/bottomcontainer")
+local OverlapGroup = require("ui/widget/overlapgroup")
 local LineWidget = require("ui/widget/linewidget")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
 local UIManager = require("ui/uimanager")
-local Screen = require("device").screen
+local Device = require("device")
+local Screen = Device.screen
 local InfoMessage = require("ui/widget/infomessage")
 local NetworkMgr = require("ui/network/manager")
 local logger = require("logger")
@@ -146,7 +150,7 @@ function DisplayDepartures:buildUI()
         })
     end
 
-    -- Build full widget
+    -- Build main content
     local content = VerticalGroup:new{
         align = "left",
         VerticalSpan:new{ height = self.padding },
@@ -156,14 +160,36 @@ function DisplayDepartures:buildUI()
         },
     }
 
-    self[1] = FrameContainer:new{
-        width = self.width,
-        height = self.height,
-        background = Blitbuffer.COLOR_WHITE,
-        bordersize = 0,
-        padding = 0,
-        margin = 0,
-        content,
+    -- Battery indicator at bottom right
+    local battery_percent = Device:getPowerDevice():getCapacity()
+    local battery_text = battery_percent .. "%"
+    local face_battery = Font:getFace("infont", self.departure_font_size)
+    local battery_widget = TextWidget:new{
+        text = battery_text,
+        face = face_battery,
+    }
+
+    local battery_container = BottomContainer:new{
+        dimen = Geom:new{ w = self.width, h = self.height },
+        RightContainer:new{
+            dimen = Geom:new{ w = self.width - self.padding, h = battery_widget:getSize().h + self.padding },
+            battery_widget,
+        },
+    }
+
+    -- Overlay battery on top of content
+    self[1] = OverlapGroup:new{
+        dimen = Geom:new{ w = self.width, h = self.height },
+        FrameContainer:new{
+            width = self.width,
+            height = self.height,
+            background = Blitbuffer.COLOR_WHITE,
+            bordersize = 0,
+            padding = 0,
+            margin = 0,
+            content,
+        },
+        battery_container,
     }
 end
 
