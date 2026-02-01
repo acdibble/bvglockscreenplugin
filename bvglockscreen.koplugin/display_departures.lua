@@ -85,19 +85,25 @@ function DisplayDepartures:buildUI()
 
     local rows = VerticalGroup:new{ align = "left" }
 
-    -- Header: Station name and current time
+    -- Header: Station name and current time (right-aligned)
+    local station_widget = TextWidget:new{
+        text = self.station_name or _("No Station"),
+        face = face_header,
+        bold = true,
+        max_width = content_width * 0.7,
+    }
+    local time_widget = TextWidget:new{
+        text = BVGUtils:getCurrentTimeString(),
+        face = face_header,
+    }
+    local station_width = station_widget:getSize().w
+    local time_width = time_widget:getSize().w
+    local spacer_width = content_width - station_width - time_width
+
     local header = HorizontalGroup:new{
-        TextWidget:new{
-            text = self.station_name or _("No Station"),
-            face = face_header,
-            bold = true,
-            max_width = content_width * 0.7,
-        },
-        HorizontalSpan:new{ width = content_width * 0.05 },
-        TextWidget:new{
-            text = BVGUtils:getCurrentTimeString(),
-            face = face_header,
-        },
+        station_widget,
+        HorizontalSpan:new{ width = spacer_width },
+        time_widget,
     }
     table.insert(rows, header)
     table.insert(rows, VerticalSpan:new{ height = self.line_height * 0.5 })
