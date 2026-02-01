@@ -42,7 +42,7 @@ end
 function BVGMenu:addFavorite(station)
     local favorites = self:getFavorites()
     -- Check if already exists
-    for _, fav in ipairs(favorites) do
+    for i,fav in ipairs(favorites) do
         if fav.id == station.id then
             return false
         end
@@ -184,7 +184,7 @@ end
 function BVGMenu:showStationSelection(stations, callback)
     local buttons = {}
 
-    for _, station in ipairs(stations) do
+    for i,station in ipairs(stations) do
         table.insert(buttons, {
             {
                 text = station.name,
@@ -233,7 +233,7 @@ function BVGMenu:showFavoritesMenu()
 
     local buttons = {}
 
-    for _, station in ipairs(favorites) do
+    for i,station in ipairs(favorites) do
         table.insert(buttons, {
             {
                 text = station.name,
@@ -294,7 +294,7 @@ function BVGMenu:showDepartureCountMenu()
     local buttons = {}
     local current = self:getDepartureCount()
 
-    for _, count in ipairs(counts) do
+    for i,count in ipairs(counts) do
         local text = tostring(count)
         if count == current then
             text = text .. " ✓"
@@ -331,7 +331,7 @@ function BVGMenu:showTimeRangeMenu()
     local buttons = {}
     local current = self:getTimeRange()
 
-    for _, range in ipairs(ranges) do
+    for i,range in ipairs(ranges) do
         local text = tostring(range) .. " " .. _("min")
         if range == current then
             text = text .. " ✓"
@@ -372,7 +372,7 @@ function BVGMenu:showFontSizeMenu()
     local buttons = {}
     local current = self:getFontSize()
 
-    for _, size in ipairs(sizes) do
+    for i,size in ipairs(sizes) do
         local text = size.name
         if size.key == current then
             text = text .. " ✓"
@@ -418,7 +418,7 @@ function BVGMenu:showTransportFilterMenu()
 
     local buttons = {}
 
-    for _, transport in ipairs(transport_types) do
+    for i,transport in ipairs(transport_types) do
         local text = transport.name
         if filters[transport.key] then
             text = text .. " ✓"

@@ -66,7 +66,7 @@ function BVGAPI:searchStations(query)
     end
 
     local stations = {}
-    for _, location in ipairs(data) do
+    for i,location in ipairs(data) do
         if location.type == "stop" or location.type == "station" then
             table.insert(stations, {
                 id = location.id,
@@ -120,7 +120,7 @@ function BVGAPI:getDepartures(station_id, options)
     end
 
     local departures = {}
-    for _, dep in ipairs(data.departures or data) do
+    for i,dep in ipairs(data.departures or data) do
         local line_name = ""
         local product = ""
 

@@ -113,7 +113,7 @@ function DisplayDepartures:buildUI()
     if self.departures and #self.departures > 0 then
         -- Calculate max line name width for right-alignment
         local max_line_chars = 0
-        for _, dep in ipairs(self.departures) do
+        for i,dep in ipairs(self.departures) do
             local len = BVGUtils:utf8len(dep.line or "")
             if len > max_line_chars then
                 max_line_chars = len
@@ -124,7 +124,7 @@ function DisplayDepartures:buildUI()
         local char_width = TextWidget:new{ text = "M", face = face_mono }:getSize().w
         local total_chars = math.floor(content_width / char_width)
 
-        for _, dep in ipairs(self.departures) do
+        for i,dep in ipairs(self.departures) do
             local row = self:buildDepartureRow(dep, face_mono, max_line_chars, total_chars)
             table.insert(rows, row)
             table.insert(rows, VerticalSpan:new{ height = self.line_height * 0.2 })
