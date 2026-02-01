@@ -8,6 +8,8 @@ local _ = require("gettext")
 
 local BVGAPI = {
     base_url = "https://v6.bvg.transport.rest",
+    cached_departures = nil,
+    cached_station_id = nil,
 }
 
 function BVGAPI:makeRequest(endpoint, force, retry_count)
@@ -173,7 +175,49 @@ function BVGAPI:getDepartures(station_id, options)
         return (a.minutes or 999) < (b.minutes or 999)
     end)
 
-    return departures
+    -- Check if data changed from cache
+    local changed = self:departuresChanged(station_id, departures)
+
+    -- Update cache
+    self.cached_station_id = station_id
+    self.cached_departures = departures
+
+    return departures, nil, changed
+end
+
+function BVGAPI:departuresChanged(station_id, new_departures)
+    -- Different station = changed
+    if self.cached_station_id ~= station_id then
+        return true
+    end
+
+    -- No cache = changed
+    if not self.cached_departures then
+        return true
+    end
+
+    -- Different count = changed
+    if #self.cached_departures ~= #new_departures then
+        return true
+    end
+
+    -- Compare each departure
+    for i, new_dep in ipairs(new_departures) do
+        local old_dep = self.cached_departures[i]
+        if old_dep.line ~= new_dep.line or
+           old_dep.direction ~= new_dep.direction or
+           old_dep.minutes ~= new_dep.minutes or
+           old_dep.delay ~= new_dep.delay or
+           old_dep.cancelled ~= new_dep.cancelled then
+            return true
+        end
+    end
+
+    return false
+end
+
+function BVGAPI:getCachedDepartures()
+    return self.cached_departures
 end
 
 return BVGAPI

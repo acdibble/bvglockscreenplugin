@@ -53,37 +53,43 @@ function BVGLockscreen:refreshScreensaver()
         return
     end
 
-    logger.dbg("BVGLockscreen: Refreshing departures")
+    logger.dbg("BVGLockscreen: Checking for departure updates")
 
     local Screensaver = require("ui/screensaver")
     local DisplayDepartures = require("display_departures")
 
-    -- Create new widget with fresh data
-    local widget = DisplayDepartures:createScreensaverWidget()
+    -- Create new widget with fresh data (returns widget and changed flag)
+    local widget, changed = DisplayDepartures:createScreensaverWidget()
 
     if widget and Screensaver.screensaver_widget then
-        -- Close old widget and show new one
-        UIManager:close(Screensaver.screensaver_widget)
-
-        Screensaver.screensaver_widget = ScreenSaverWidget:new{
-            widget = widget,
-            background = Blitbuffer.COLOR_WHITE,
-            covers_fullscreen = true,
-        }
-        Screensaver.screensaver_widget.modal = true
-        Screensaver.screensaver_widget.dithered = true
-
-        -- Full refresh every 10 minutes to clear ghosting
+        -- Only update display if data changed or full refresh needed
         local now = os.time()
-        local refresh_mode = "ui"
-        if (now - self.last_full_refresh) >= self.full_refresh_interval then
-            refresh_mode = "full"
-            self.last_full_refresh = now
-            logger.dbg("BVGLockscreen: Performing full refresh")
-        end
+        local needs_full_refresh = (now - self.last_full_refresh) >= self.full_refresh_interval
 
-        UIManager:show(Screensaver.screensaver_widget, refresh_mode)
-        logger.dbg("BVGLockscreen: Widget refreshed")
+        if changed or needs_full_refresh then
+            -- Close old widget and show new one
+            UIManager:close(Screensaver.screensaver_widget)
+
+            Screensaver.screensaver_widget = ScreenSaverWidget:new{
+                widget = widget,
+                background = Blitbuffer.COLOR_WHITE,
+                covers_fullscreen = true,
+            }
+            Screensaver.screensaver_widget.modal = true
+            Screensaver.screensaver_widget.dithered = true
+
+            local refresh_mode = "ui"
+            if needs_full_refresh then
+                refresh_mode = "full"
+                self.last_full_refresh = now
+                logger.dbg("BVGLockscreen: Performing full refresh")
+            end
+
+            UIManager:show(Screensaver.screensaver_widget, refresh_mode)
+            logger.dbg("BVGLockscreen: Widget refreshed (data changed)")
+        else
+            logger.dbg("BVGLockscreen: Skipping refresh (no changes)")
+        end
     end
 
     -- Schedule next refresh

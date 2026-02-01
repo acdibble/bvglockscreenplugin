@@ -291,14 +291,14 @@ function DisplayDepartures:createScreensaverWidget()
         options[key] = value
     end
 
-    local departures, err = BVGAPI:getDepartures(station.id, options)
+    local departures, err, changed = BVGAPI:getDepartures(station.id, options)
 
     local widget = DisplayDepartures:new{
         departures = departures or {},
         station_name = station.name,
     }
 
-    return widget
+    return widget, changed
 end
 
 return DisplayDepartures
