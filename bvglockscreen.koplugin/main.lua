@@ -11,17 +11,72 @@ local _ = require("gettext")
 local BVGLockscreen = WidgetContainer:extend{
     name = "bvglockscreen",
     is_doc_only = false,
+    refresh_interval = 15, -- refresh every 15 seconds
+    refresh_task = nil,
+    screensaver_active = false,
 }
 
 function BVGLockscreen:init()
     self.ui.menu:registerToMainMenu(self)
     self:patchDofile()
     self:patchScreensaver()
+
+    -- Create the refresh task function
+    self.refresh_task = function()
+        self:refreshScreensaver()
+    end
 end
 
 function BVGLockscreen:addToMainMenu(menu_items)
     local BVGMenu = require("bvg_menu")
     menu_items.bvg_lockscreen = BVGMenu:getMenuTable()
+end
+
+function BVGLockscreen:scheduleRefresh()
+    if self.screensaver_active then
+        logger.dbg("BVGLockscreen: Scheduling refresh in", self.refresh_interval, "seconds")
+        UIManager:scheduleIn(self.refresh_interval, self.refresh_task)
+    end
+end
+
+function BVGLockscreen:unscheduleRefresh()
+    if self.refresh_task then
+        UIManager:unschedule(self.refresh_task)
+        logger.dbg("BVGLockscreen: Refresh task unscheduled")
+    end
+end
+
+function BVGLockscreen:refreshScreensaver()
+    if not self.screensaver_active then
+        return
+    end
+
+    logger.dbg("BVGLockscreen: Refreshing departures")
+
+    local Screensaver = require("ui/screensaver")
+    local DisplayDepartures = require("display_departures")
+
+    -- Create new widget with fresh data
+    local widget = DisplayDepartures:createScreensaverWidget()
+
+    if widget and Screensaver.screensaver_widget then
+        -- Close old widget and show new one
+        UIManager:close(Screensaver.screensaver_widget)
+
+        Screensaver.screensaver_widget = ScreenSaverWidget:new{
+            widget = widget,
+            background = Blitbuffer.COLOR_WHITE,
+            covers_fullscreen = true,
+        }
+        Screensaver.screensaver_widget.modal = true
+        Screensaver.screensaver_widget.dithered = true
+
+        UIManager:show(Screensaver.screensaver_widget, "full")
+        logger.dbg("BVGLockscreen: Widget refreshed")
+    end
+
+    -- Schedule next refresh
+    self:scheduleRefresh()
 end
 
 function BVGLockscreen:patchDofile()
@@ -85,6 +140,11 @@ function BVGLockscreen:patchScreensaver()
         Screensaver._orig_show_before_bvg = Screensaver.show
     end
 
+    -- Save original close method if not already saved
+    if not Screensaver._orig_close_before_bvg then
+        Screensaver._orig_close_before_bvg = Screensaver.close
+    end
+
     Screensaver.show = function(screensaver_instance)
         local ss_type = G_reader_settings:readSetting("screensaver_type")
 
@@ -108,6 +168,7 @@ function BVGLockscreen:patchScreensaver()
 
             -- Set device to screen saver mode
             Device.screen_saver_mode = true
+            plugin_instance.screensaver_active = true
 
             -- Handle rotation if needed (switch to portrait if in landscape)
             local rotation_mode = Screen:getRotationMode()
@@ -135,8 +196,12 @@ function BVGLockscreen:patchScreensaver()
 
                     UIManager:show(screensaver_instance.screensaver_widget, "full")
                     logger.dbg("BVGLockscreen: Widget displayed")
+
+                    -- Schedule periodic refresh
+                    plugin_instance:scheduleRefresh()
                 else
                     logger.warn("BVGLockscreen: Failed to create widget, falling back")
+                    plugin_instance.screensaver_active = false
                     return Screensaver._orig_show_before_bvg(screensaver_instance)
                 end
             end
@@ -153,6 +218,17 @@ function BVGLockscreen:patchScreensaver()
         else
             return Screensaver._orig_show_before_bvg(screensaver_instance)
         end
+    end
+
+    Screensaver.close = function(screensaver_instance)
+        -- Stop periodic refresh when screensaver closes
+        if plugin_instance.screensaver_active then
+            plugin_instance.screensaver_active = false
+            plugin_instance:unscheduleRefresh()
+            logger.dbg("BVGLockscreen: Screensaver closed, refresh stopped")
+        end
+
+        return Screensaver._orig_close_before_bvg(screensaver_instance)
     end
 
     logger.dbg("BVGLockscreen: Screensaver patched successfully")

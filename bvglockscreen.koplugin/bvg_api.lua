@@ -10,8 +10,8 @@ local BVGAPI = {
     base_url = "https://v6.bvg.transport.rest",
 }
 
-function BVGAPI:makeRequest(endpoint)
-    if not BVGUtils:canMakeRequest() then
+function BVGAPI:makeRequest(endpoint, force)
+    if not force and not BVGUtils:canMakeRequest() then
         return nil, "rate_limited"
     end
 
@@ -113,7 +113,7 @@ function BVGAPI:getDepartures(station_id, options)
         endpoint = endpoint .. "&regional=" .. tostring(options.regional)
     end
 
-    local data, err = self:makeRequest(endpoint)
+    local data, err = self:makeRequest(endpoint, options.force)
 
     if not data then
         return nil, err

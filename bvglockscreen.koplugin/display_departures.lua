@@ -279,10 +279,11 @@ function DisplayDepartures:createScreensaverWidget()
         return nil
     end
 
-    -- For screensaver, we try to use cached data or show placeholder
+    -- For screensaver, force refresh (bypass rate limiting)
     local options = {
         duration = BVGMenu:getTimeRange(),
         results = BVGMenu:getDepartureCount(),
+        force = true,
     }
 
     local filters = BVGMenu:getTransportFilters()
