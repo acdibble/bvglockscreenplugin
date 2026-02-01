@@ -12,8 +12,10 @@ local BVGLockscreen = WidgetContainer:extend{
     name = "bvglockscreen",
     is_doc_only = false,
     refresh_interval = 15, -- refresh every 15 seconds
+    full_refresh_interval = 600, -- full refresh every 10 minutes
     refresh_task = nil,
     screensaver_active = false,
+    last_full_refresh = 0,
 }
 
 function BVGLockscreen:init()
@@ -71,7 +73,16 @@ function BVGLockscreen:refreshScreensaver()
         Screensaver.screensaver_widget.modal = true
         Screensaver.screensaver_widget.dithered = true
 
-        UIManager:show(Screensaver.screensaver_widget, "full")
+        -- Full refresh every 10 minutes to clear ghosting
+        local now = os.time()
+        local refresh_mode = "ui"
+        if (now - self.last_full_refresh) >= self.full_refresh_interval then
+            refresh_mode = "full"
+            self.last_full_refresh = now
+            logger.dbg("BVGLockscreen: Performing full refresh")
+        end
+
+        UIManager:show(Screensaver.screensaver_widget, refresh_mode)
         logger.dbg("BVGLockscreen: Widget refreshed")
     end
 
@@ -195,6 +206,7 @@ function BVGLockscreen:patchScreensaver()
                     screensaver_instance.screensaver_widget.dithered = true
 
                     UIManager:show(screensaver_instance.screensaver_widget, "full")
+                    plugin_instance.last_full_refresh = os.time()
                     logger.dbg("BVGLockscreen: Widget displayed")
 
                     -- Schedule periodic refresh
