@@ -9,27 +9,64 @@ on:
 
 jobs:
   build:
-    name: Build (Native Linux)
+    name: Build (Kindle ARM)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable ARM architecture
+        run: |
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y meson ninja-build libgtk2.0-dev libcurl4-openssl-dev libjson-c-dev
+          sudo apt-get install -y meson ninja-build \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            libgtk2.0-dev:armhf libcurl4-openssl-dev:armhf libjson-c-dev:armhf
+
+      - name: Create cross-compile file
+        run: |
+          cat > /tmp/kindle-cross.txt << 'EOF'
+          [binaries]
+          c = 'arm-linux-gnueabihf-gcc'
+          cpp = 'arm-linux-gnueabihf-g++'
+          ar = 'arm-linux-gnueabihf-ar'
+          strip = 'arm-linux-gnueabihf-strip'
+          pkgconfig = 'pkg-config'
+
+          [built-in options]
+          c_args = ['-mfloat-abi=hard', '-mfpu=neon']
+          cpp_args = ['-mfloat-abi=hard', '-mfpu=neon']
+
+          [properties]
+          pkg_config_libdir = '/usr/lib/arm-linux-gnueabihf/pkgconfig'
+
+          [host_machine]
+          system = 'linux'
+          cpu_family = 'arm'
+          cpu = 'cortex-a9'
+          endian = 'little'
+          EOF
 
       - name: Build
         working-directory: bvg-kindle
         run: |
-          meson setup build
-          meson compile -C build
+          meson setup --cross-file /tmp/kindle-cross.txt build_kindle
+          meson compile -C build_kindle
 
       - name: Verify binary
         working-directory: bvg-kindle
         run: |
-          file build/bvg-kindle
-          ldd build/bvg-kindle
+          file build_kindle/bvg-kindle
+          arm-linux-gnueabihf-strip build_kindle/bvg-kindle
+          ls -la build_kindle/bvg-kindle
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: bvg-kindle-binary
+          path: bvg-kindle/build_kindle/bvg-kindle
 
   package:
     name: Create KUAL Extension Package
@@ -38,31 +75,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: bvg-kindle-binary
+          path: bin
+
       - name: Create package
         run: |
           mkdir -p package/bvg
+          cp bin/bvg-kindle package/bvg/
+          chmod +x package/bvg/bvg-kindle
           cp bvg-kindle/extensions/bvg/config.xml package/bvg/
           cp bvg-kindle/extensions/bvg/menu.json package/bvg/
           cp bvg-kindle/extensions/bvg/bvg.sh package/bvg/
           chmod +x package/bvg/bvg.sh
-
-          cat > package/bvg/INSTALL.txt << 'EOF'
-          BVG Departures - KUAL Extension
-
-          Installation:
-          1. Cross-compile bvg-kindle binary using the Kindle SDK
-          2. Copy the bvg-kindle binary to this folder
-          3. Copy this entire 'bvg' folder to /mnt/us/extensions/ on your Kindle
-          4. Open KUAL and select "BVG Departures"
-
-          Build instructions:
-            cd bvg-kindle
-            meson setup --cross-file ~/x-tools/arm-kindlehf-linux-gnueabihf/meson-crosscompile.txt build_kindle
-            meson compile -C build_kindle
-
-          See: https://kindlemodding.org/kindle-dev/kindle-sdk.html
-          EOF
-
           cd package && zip -r ../bvg-kual-extension.zip bvg
 
       - name: Upload package
@@ -79,8 +106,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-
       - name: Download package
         uses: actions/download-artifact@v4
         with:
