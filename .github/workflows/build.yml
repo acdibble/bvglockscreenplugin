@@ -32,7 +32,7 @@ jobs:
         working-directory: bvg-kindle
         run: |
           export PATH=$HOME/x-tools/arm-kindlehf-linux-gnueabihf/bin:$PATH
-          CROSS_FILE=$HOME/x-tools/arm-kindlehf-linux-gnueabihf/meson-cross.txt
+          CROSS_FILE=$HOME/x-tools/arm-kindlehf-linux-gnueabihf/meson-crosscompile.txt
           meson setup --cross-file "$CROSS_FILE" build_kindle
           meson compile -C build_kindle
 
