@@ -3,7 +3,7 @@ project('bvg-kindle', 'cpp', version: 'v1.0.0',
 
 gtk_dep = dependency('gtk+-2.0')
 curl_dep = dependency('libcurl')
-json_dep = dependency('json-c')
+json_dep = dependency('json-c', fallback: ['json-c', 'json_c_dep'])
 
 sources = files(
     'src/main.cpp',

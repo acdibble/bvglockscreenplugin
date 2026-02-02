@@ -1,0 +1,8 @@
+[wrap-file]
+directory = json-c-0.17
+source_url = https://s3.amazonaws.com/json-c_releases/releases/json-c-0.17.tar.gz
+source_filename = json-c-0.17.tar.gz
+source_hash = 024d302a3aadcbf9f78735320a6d5aedf8b77876c8ac8bbb95081ca55054c7eb
+
+[provide]
+json-c = json_c_dep
