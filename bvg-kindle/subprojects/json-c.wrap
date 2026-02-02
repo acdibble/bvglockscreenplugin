@@ -2,7 +2,7 @@
 directory = json-c-0.17
 source_url = https://s3.amazonaws.com/json-c_releases/releases/json-c-0.17.tar.gz
 source_filename = json-c-0.17.tar.gz
-source_hash = 024d302a3aadcbf9f78735320a6d5aedf8b77876c8ac8bbb95081ca55054c7eb
+source_hash = 7550914d58fb63b2c3546f3ccfbe11f1c094147bd31a69dcd23714d7956159e6
 
 [provide]
 json-c = json_c_dep
