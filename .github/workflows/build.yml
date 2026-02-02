@@ -11,9 +11,6 @@ jobs:
   build:
     name: Build (Native Linux)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: bvg-kindle
     steps:
       - uses: actions/checkout@v4
 
@@ -23,11 +20,13 @@ jobs:
           sudo apt-get install -y meson ninja-build libgtk2.0-dev libcurl4-openssl-dev libjson-c-dev
 
       - name: Build
+        working-directory: bvg-kindle
         run: |
           meson setup build
           meson compile -C build
 
       - name: Verify binary
+        working-directory: bvg-kindle
         run: |
           file build/bvg-kindle
           ldd build/bvg-kindle
