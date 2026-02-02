@@ -5,6 +5,7 @@ local Screen = Device.screen
 local Blitbuffer = require("ffi/blitbuffer")
 local ScreenSaverWidget = require("ui/widget/screensaverwidget")
 local NetworkMgr = require("ui/network/manager")
+local PluginShare = require("pluginshare")
 local logger = require("logger")
 local _ = require("gettext")
 
@@ -187,6 +188,10 @@ function BVGLockscreen:patchScreensaver()
             Device.screen_saver_mode = true
             plugin_instance.screensaver_active = true
 
+            -- Prevent device from suspending while BVG screensaver is active
+            UIManager:preventStandby()
+            PluginShare.pause_auto_suspend = true
+
             -- Handle rotation if needed (switch to portrait if in landscape)
             local rotation_mode = Screen:getRotationMode()
             Device.orig_rotation_mode = rotation_mode
@@ -243,6 +248,11 @@ function BVGLockscreen:patchScreensaver()
         if plugin_instance.screensaver_active then
             plugin_instance.screensaver_active = false
             plugin_instance:unscheduleRefresh()
+
+            -- Allow device to suspend again
+            UIManager:allowStandby()
+            PluginShare.pause_auto_suspend = false
+
             logger.dbg("BVGLockscreen: Screensaver closed, refresh stopped")
         end
 
