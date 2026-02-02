@@ -11,24 +11,39 @@ jobs:
   build:
     name: Build (Kindle)
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/koreader/koxtoolchain:kindlehf-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install meson
+      - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y meson ninja-build pkg-config
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config \
+            build-essential autoconf automake libtool-bin gawk bison flex \
+            texinfo help2man gperf libncurses-dev unzip wget git
+
+      - name: Cache toolchain
+        id: cache-tc
+        uses: actions/cache@v4
+        with:
+          path: ~/x-tools/arm-kindlehf-linux-gnueabihf
+          key: kindle-toolchain-v1
+
+      - name: Build Kindle toolchain
+        if: steps.cache-tc.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/koreader/koxtoolchain.git
+          cd koxtoolchain
+          ./gen-tc.sh kindlehf
 
       - name: Create cross-compile file
         run: |
-          cat > /tmp/kindle-cross.txt << 'EOF'
+          TC_PATH=~/x-tools/arm-kindlehf-linux-gnueabihf
+          cat > /tmp/kindle-cross.txt << EOF
           [binaries]
-          c = 'arm-kindlehf-linux-gnueabihf-gcc'
-          cpp = 'arm-kindlehf-linux-gnueabihf-g++'
-          ar = 'arm-kindlehf-linux-gnueabihf-ar'
-          strip = 'arm-kindlehf-linux-gnueabihf-strip'
+          c = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-gcc'
+          cpp = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-g++'
+          ar = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-ar'
+          strip = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-strip'
           pkgconfig = 'pkg-config'
 
           [built-in options]
@@ -47,18 +62,16 @@ jobs:
       - name: Build
         working-directory: bvg-kindle
         run: |
-          source /home/ko/x-compile/refs/x-compile.sh kindlehf env
-          export PKG_CONFIG_PATH="${CROSS_TC_PKG_CONFIG_PATH}"
-          export PKG_CONFIG_LIBDIR="${CROSS_TC_PKG_CONFIG_PATH}"
+          export PATH=~/x-tools/arm-kindlehf-linux-gnueabihf/bin:$PATH
           meson setup --cross-file /tmp/kindle-cross.txt build_kindle
           meson compile -C build_kindle
 
       - name: Verify and strip binary
-        working-directory: bvg-kindle
         run: |
-          file build_kindle/bvg-kindle
-          arm-kindlehf-linux-gnueabihf-strip build_kindle/bvg-kindle
-          ls -la build_kindle/bvg-kindle
+          export PATH=~/x-tools/arm-kindlehf-linux-gnueabihf/bin:$PATH
+          file bvg-kindle/build_kindle/bvg-kindle
+          arm-kindlehf-linux-gnueabihf-strip bvg-kindle/build_kindle/bvg-kindle
+          ls -la bvg-kindle/build_kindle/bvg-kindle
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
