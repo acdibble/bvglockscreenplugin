@@ -1,0 +1,2 @@
+option('kindle_root_dir', type: 'string', value: '/mnt/us',
+       description: 'Kindle root directory for installation')

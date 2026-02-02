@@ -1,0 +1,12 @@
+{
+    "items": [
+        {
+            "name": "BVG Departures",
+            "priority": 0,
+            "items": [
+                {"name": "Start Display", "action": "bvg.sh"},
+                {"name": "Configure Station", "action": "bvg.sh", "params": "--config"}
+            ]
+        }
+    ]
+}

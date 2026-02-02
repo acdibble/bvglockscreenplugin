@@ -1,0 +1,91 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+    tags: ['v*']
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build:
+    name: Build (Native Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build libgtk2.0-dev libcurl4-openssl-dev libjson-c-dev
+
+      - name: Build
+        run: |
+          meson setup build
+          meson compile -C build
+
+      - name: Verify binary
+        run: |
+          file build/bvg-kindle
+          ldd build/bvg-kindle
+
+  package:
+    name: Create KUAL Extension Package
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create package
+        run: |
+          mkdir -p package/bvg
+          cp extensions/bvg/config.xml package/bvg/
+          cp extensions/bvg/menu.json package/bvg/
+          cp extensions/bvg/bvg.sh package/bvg/
+          chmod +x package/bvg/bvg.sh
+
+          # Create install instructions
+          cat > package/bvg/INSTALL.txt << 'EOF'
+          BVG Departures - KUAL Extension
+
+          Installation:
+          1. Cross-compile bvg-kindle binary using the Kindle SDK
+          2. Copy the bvg-kindle binary to this folder
+          3. Copy this entire 'bvg' folder to /mnt/us/extensions/ on your Kindle
+          4. Open KUAL and select "BVG Departures"
+
+          Build instructions:
+            meson setup --cross-file ~/x-tools/arm-kindlehf-linux-gnueabihf/meson-crosscompile.txt build_kindle
+            meson compile -C build_kindle
+
+          See: https://kindlemodding.org/kindle-dev/kindle-sdk.html
+          EOF
+
+          cd package && zip -r ../bvg-kual-extension.zip bvg
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bvg-kual-extension
+          path: bvg-kual-extension.zip
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download package
+        uses: actions/download-artifact@v4
+        with:
+          name: bvg-kual-extension
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bvg-kual-extension.zip
+          generate_release_notes: true

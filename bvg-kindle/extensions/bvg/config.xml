@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension>
+    <information>
+        <name>BVG Departures</name>
+        <version>1.0.0</version>
+        <author>Andrew</author>
+        <id>bvg</id>
+    </information>
+</extension>
