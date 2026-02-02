@@ -31,6 +31,7 @@ jobs:
         run: |
           sudo apt-get install -y meson ninja-build \
             gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            x11proto-dev shared-mime-info \
             libgtk2.0-dev:armhf libcurl4-openssl-dev:armhf libjson-c-dev:armhf
 
       - name: Create cross-compile file
@@ -48,7 +49,7 @@ jobs:
           cpp_args = ['-mfloat-abi=hard', '-mfpu=neon']
 
           [properties]
-          pkg_config_libdir = '/usr/lib/arm-linux-gnueabihf/pkgconfig'
+          pkg_config_libdir = '/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig'
 
           [host_machine]
           system = 'linux'
@@ -60,6 +61,7 @@ jobs:
       - name: Build
         working-directory: bvg-kindle
         run: |
+          export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig
           meson setup --cross-file /tmp/kindle-cross.txt build_kindle
           meson compile -C build_kindle
 
