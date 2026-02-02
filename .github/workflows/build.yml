@@ -11,6 +11,9 @@ jobs:
   build:
     name: Build (Native Linux)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bvg-kindle
     steps:
       - uses: actions/checkout@v4
 
@@ -39,12 +42,11 @@ jobs:
       - name: Create package
         run: |
           mkdir -p package/bvg
-          cp extensions/bvg/config.xml package/bvg/
-          cp extensions/bvg/menu.json package/bvg/
-          cp extensions/bvg/bvg.sh package/bvg/
+          cp bvg-kindle/extensions/bvg/config.xml package/bvg/
+          cp bvg-kindle/extensions/bvg/menu.json package/bvg/
+          cp bvg-kindle/extensions/bvg/bvg.sh package/bvg/
           chmod +x package/bvg/bvg.sh
 
-          # Create install instructions
           cat > package/bvg/INSTALL.txt << 'EOF'
           BVG Departures - KUAL Extension
 
@@ -55,6 +57,7 @@ jobs:
           4. Open KUAL and select "BVG Departures"
 
           Build instructions:
+            cd bvg-kindle
             meson setup --cross-file ~/x-tools/arm-kindlehf-linux-gnueabihf/meson-crosscompile.txt build_kindle
             meson compile -C build_kindle
 
