@@ -15,40 +15,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y meson ninja-build pkg-config \
-            build-essential autoconf automake libtool-bin gawk bison flex \
-            texinfo help2man gperf libncurses-dev unzip wget git
+        run: sudo apt-get update && sudo apt-get install -y meson ninja-build
 
-      - name: Cache toolchain
-        id: cache-tc
-        uses: actions/cache@v4
-        with:
-          path: ~/x-tools/arm-kindlehf-linux-gnueabihf
-          key: kindle-toolchain-v1
-
-      - name: Build Kindle toolchain
-        if: steps.cache-tc.outputs.cache-hit != 'true'
+      - name: Download Kindle toolchain
         run: |
-          git clone --depth 1 https://github.com/koreader/koxtoolchain.git
-          cd koxtoolchain
-          ./gen-tc.sh kindlehf
+          curl -L -o kindlehf.tar.gz https://github.com/koreader/koxtoolchain/releases/download/2025.01/kindlehf.tar.gz
+          mkdir -p ~/x-tools
+          tar -xzf kindlehf.tar.gz -C ~/x-tools
 
       - name: Create cross-compile file
         run: |
-          TC_PATH=~/x-tools/arm-kindlehf-linux-gnueabihf
+          TC=~/x-tools/arm-kindlehf-linux-gnueabihf
           cat > /tmp/kindle-cross.txt << EOF
           [binaries]
-          c = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-gcc'
-          cpp = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-g++'
-          ar = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-ar'
-          strip = '${TC_PATH}/bin/arm-kindlehf-linux-gnueabihf-strip'
+          c = '${TC}/bin/arm-kindlehf-linux-gnueabihf-gcc'
+          cpp = '${TC}/bin/arm-kindlehf-linux-gnueabihf-g++'
+          ar = '${TC}/bin/arm-kindlehf-linux-gnueabihf-ar'
+          strip = '${TC}/bin/arm-kindlehf-linux-gnueabihf-strip'
           pkgconfig = 'pkg-config'
 
           [built-in options]
-          c_args = []
-          cpp_args = []
           c_link_args = ['-static-libgcc', '-static-libstdc++']
           cpp_link_args = ['-static-libgcc', '-static-libstdc++']
 
@@ -68,9 +54,8 @@ jobs:
 
       - name: Verify and strip binary
         run: |
-          export PATH=~/x-tools/arm-kindlehf-linux-gnueabihf/bin:$PATH
           file bvg-kindle/build_kindle/bvg-kindle
-          arm-kindlehf-linux-gnueabihf-strip bvg-kindle/build_kindle/bvg-kindle
+          ~/x-tools/arm-kindlehf-linux-gnueabihf/bin/arm-kindlehf-linux-gnueabihf-strip bvg-kindle/build_kindle/bvg-kindle
           ls -la bvg-kindle/build_kindle/bvg-kindle
 
       - name: Upload binary
