@@ -20,18 +20,17 @@ jobs:
       - name: Download Kindle toolchain
         run: |
           curl -L -o kindlehf.tar.gz https://github.com/koreader/koxtoolchain/releases/download/2025.01/kindlehf.tar.gz
-          mkdir -p ~/x-tools
-          tar -xzf kindlehf.tar.gz -C ~/x-tools
+          tar -xzf kindlehf.tar.gz -C $HOME
 
       - name: Create cross-compile file
         run: |
-          TC=~/x-tools/arm-kindlehf-linux-gnueabihf
+          TC=$HOME/x-tools/arm-kindlehf-linux-gnueabihf
           cat > /tmp/kindle-cross.txt << EOF
           [binaries]
-          c = '${TC}/bin/arm-kindlehf-linux-gnueabihf-gcc'
-          cpp = '${TC}/bin/arm-kindlehf-linux-gnueabihf-g++'
-          ar = '${TC}/bin/arm-kindlehf-linux-gnueabihf-ar'
-          strip = '${TC}/bin/arm-kindlehf-linux-gnueabihf-strip'
+          c = '$TC/bin/arm-kindlehf-linux-gnueabihf-gcc'
+          cpp = '$TC/bin/arm-kindlehf-linux-gnueabihf-g++'
+          ar = '$TC/bin/arm-kindlehf-linux-gnueabihf-ar'
+          strip = '$TC/bin/arm-kindlehf-linux-gnueabihf-strip'
           pkgconfig = 'pkg-config'
 
           [built-in options]
@@ -48,14 +47,14 @@ jobs:
       - name: Build
         working-directory: bvg-kindle
         run: |
-          export PATH=~/x-tools/arm-kindlehf-linux-gnueabihf/bin:$PATH
+          export PATH=$HOME/x-tools/arm-kindlehf-linux-gnueabihf/bin:$PATH
           meson setup --cross-file /tmp/kindle-cross.txt build_kindle
           meson compile -C build_kindle
 
       - name: Verify and strip binary
         run: |
           file bvg-kindle/build_kindle/bvg-kindle
-          ~/x-tools/arm-kindlehf-linux-gnueabihf/bin/arm-kindlehf-linux-gnueabihf-strip bvg-kindle/build_kindle/bvg-kindle
+          $HOME/x-tools/arm-kindlehf-linux-gnueabihf/bin/arm-kindlehf-linux-gnueabihf-strip bvg-kindle/build_kindle/bvg-kindle
           ls -la bvg-kindle/build_kindle/bvg-kindle
 
       - name: Upload binary
