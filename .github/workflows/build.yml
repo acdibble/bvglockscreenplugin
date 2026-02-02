@@ -9,47 +9,33 @@ on:
 
 jobs:
   build:
-    name: Build (Kindle ARM)
+    name: Build (Kindle)
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/koreader/koxtoolchain:kindlehf-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable ARM architecture
+      - name: Install meson
         run: |
-          sudo dpkg --add-architecture armhf
-          # Restrict default sources to amd64 only (Ubuntu 24.04 uses .sources format)
-          sudo sed -i 's/^Architectures:.*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          if ! grep -q "^Architectures:" /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null; then
-            sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          fi
-          # Add armhf sources from ports
-          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/armhf.list
-          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/armhf.list
-          sudo apt-get update
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get install -y meson ninja-build \
-            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
-            x11proto-dev shared-mime-info \
-            libgtk2.0-dev:armhf libcurl4-openssl-dev:armhf libjson-c-dev:armhf
+          apt-get update
+          apt-get install -y meson ninja-build pkg-config
 
       - name: Create cross-compile file
         run: |
           cat > /tmp/kindle-cross.txt << 'EOF'
           [binaries]
-          c = 'arm-linux-gnueabihf-gcc'
-          cpp = 'arm-linux-gnueabihf-g++'
-          ar = 'arm-linux-gnueabihf-ar'
-          strip = 'arm-linux-gnueabihf-strip'
+          c = 'arm-kindlehf-linux-gnueabihf-gcc'
+          cpp = 'arm-kindlehf-linux-gnueabihf-g++'
+          ar = 'arm-kindlehf-linux-gnueabihf-ar'
+          strip = 'arm-kindlehf-linux-gnueabihf-strip'
           pkgconfig = 'pkg-config'
 
           [built-in options]
-          c_args = ['-mfloat-abi=hard', '-mfpu=neon']
-          cpp_args = ['-mfloat-abi=hard', '-mfpu=neon']
-
-          [properties]
-          pkg_config_libdir = '/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig'
+          c_args = []
+          cpp_args = []
+          c_link_args = ['-static-libgcc', '-static-libstdc++']
+          cpp_link_args = ['-static-libgcc', '-static-libstdc++']
 
           [host_machine]
           system = 'linux'
@@ -61,15 +47,17 @@ jobs:
       - name: Build
         working-directory: bvg-kindle
         run: |
-          export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig
+          source /home/ko/x-compile/refs/x-compile.sh kindlehf env
+          export PKG_CONFIG_PATH="${CROSS_TC_PKG_CONFIG_PATH}"
+          export PKG_CONFIG_LIBDIR="${CROSS_TC_PKG_CONFIG_PATH}"
           meson setup --cross-file /tmp/kindle-cross.txt build_kindle
           meson compile -C build_kindle
 
-      - name: Verify binary
+      - name: Verify and strip binary
         working-directory: bvg-kindle
         run: |
           file build_kindle/bvg-kindle
-          arm-linux-gnueabihf-strip build_kindle/bvg-kindle
+          arm-kindlehf-linux-gnueabihf-strip build_kindle/bvg-kindle
           ls -la build_kindle/bvg-kindle
 
       - name: Upload binary
